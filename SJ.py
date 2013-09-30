@@ -9,7 +9,7 @@ __all__ = ['ftf']
 import numpy as np
 
 
-def ftf(df, z, A, k, f0):
+def ftf(df, z, A, k, f0, f_scale):
     """
     Use the Sader-Jarvis inversion [JS] to obtain Force(z) from frequency(z)
     Inspired by MATLAB verion by [JW].
@@ -17,7 +17,7 @@ def ftf(df, z, A, k, f0):
     Parameters
     ----------
     df : array_like 
-        frequency in Hz
+        frequency in volts
     z : array_like
         input array length n
         tip position in meters in order from closest approach 
@@ -29,6 +29,8 @@ def ftf(df, z, A, k, f0):
         spring constant of cantilever
     f0 : float
         resonant frequency of cantilever used for experiment
+    f_scale : float
+        scaling factor in hz/volt
     
     Returns
     -------
@@ -66,7 +68,7 @@ def ftf(df, z, A, k, f0):
     """
     
     #make input array in numpy array
-    df = np.asarray(df)
+    df = np.asarray(df)*f_scale
     z = np.asarray(z)
     force = np.zeros(np.size(df)-2)
     #calculate the simple derivative as (df[i+1]-df[i])/(z[i+1]-z[i])
@@ -75,8 +77,6 @@ def ftf(df, z, A, k, f0):
     for i in range(np.size(z)-2):
         #integration range z_prime offset by one
         z_diff = z[i+1:-1] - z[i]
-        print size(z_diff)
-        print size(ddf_dz)
         #set up the integrand and then integrate with trapezoid
         integrand =\
         (1+((np.sqrt(A))/(8*np.sqrt(np.pi*(z_diff)))))*df[i+1:-1]-\

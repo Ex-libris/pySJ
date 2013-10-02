@@ -1,5 +1,5 @@
 __all__ = ["DFData", "SmallMolecule", "CornerHole",\
-        "Adatom", "AverageCurve"]
+        "Adatom", "AverageCurve", "ReadOmicronXY"]
 
 __version__ = "0.1"
 
@@ -153,7 +153,124 @@ class AverageCurve(object):
         plt.plot(self.force_curves[0].z,self.average)
 
                     
+
+
+class ReadOmicronXY(object):
+    """
+    Class to  hold omicron XY files from vernissage
+    :param folder_root:
+        string for root folder
+    :param filename:
+        string for the specific frequency-shift data that will be 
+        examined
+    """
+    
+    def __init__(self, folder_root, filename):
+        self.folder_root = folder_root
+        self.filename = filename
+    
+    def change_root(self, root):
+        """
+        change the object root folder name
+    
+        Parameters
+        ----------
+        root : string\of\path\to\data
         
+        Returns
+        -------
+        self.folder_root : updated folder root
+        """        
+        self.folder_root = root
+        return self.folder_root
+        
+    def change_file(self, file):
+        """
+        change the object filename
+    
+        Parameters
+        ----------
+        root : string\of\path\to\data
+        
+        Returns
+        -------
+        self.folder_root : updated folder root
+        """        
+        self.filename = file
+        self.get_column
+        return self.filename
+        
+    def load_file(self):
+        """
+        load the file and create the numpy arrays for z and df
+    
+        Parameters
+        ----------
+        
+        
+        Returns
+        -------
+        self.z : numpy array
+                tip-sample distance
+        self.df : numpy array
+                frequency shifts
+        self.data : numpy array
+                2n array of tip-sample distance and frequency shifts
+        """        
+        self.data = np.loadtxt(self.folder_root+self.filename)
+        self.get_column
+
+    def get_column(self):
+        """
+        get the distance and frequency shift from omicron data
+        and put them into individual variables 
+        Addtionally make all the data run from closest approach to furthest.
+        That is, from interacting to not interacting.
+        
+        Parameters
+        ----------
+        
+        
+        Returns
+        -------
+        self.z_approach : numpy array
+                       approach array of tip-sample  distance for force curve
+                       organized from closest to furthest from sample
+        self.z_retract : numpy array
+                        retract array of tip-sample  distance for force curve
+                        organized from closest to furthest from sample
+        self.df_approach : numpy array
+                        retract array of frequency shift for force curve
+                        organized from closest to furthest from sample
+        self.df_retract : numpy array
+                        retract array of frequency shift for force curve
+                        organized from closest to furthest from sample
+            
+        """                                        
+        self.z_approach = np.zeros(np.size(self.data[:,0]))
+        self.z_retract = np.zeros(np.size(self.data[:,0]))
+        self.df_approach = np.zeros(np.size(self.data[:,0]))
+        self.df_retract = np.zeros(np.size(self.data[:,0]))
+        
+        if np.size(self.data[0:np.argmin(self.data[:,0]),0]) < (
+                                                np.size(self.data[:,0])):
+            self.z_approach = self.data[np.size(self.data[:,0])/2-1:0:-1,0]
+            self.z_retract = self.data[np.size(self.data[:,0])/2:,0]
+            self.df_approach = self.data[np.size(self.data[:,0])/2-1:0:-1,1]
+            self.df_retract = self.data[np.size(self.data[:,0])/2:,1]
+        else:
+            self.z_approach = self.data[-1::-1,0]
+            self.df_approach = self.data[-1::-1,1]
+            
+        return self.z_approach,self.z_retract,self.df_approach,self.df_retract
+            
+            
+            
+            
+        
+        
+        
+
             
 if __name__ == '__main__':
     
@@ -168,30 +285,11 @@ if __name__ == '__main__':
     order = 1
     freq = 0.1
     
-    z,df = datastrip.read_omicron_data(folder_root+"sm\\"+sys.argv[1])
-    sm = SmallMolecule(z,df, A, k, f0, fs)
+    data = ReadOmicronXY(folder_root, sys.argv[1])
+    data.load_file()
+    data.get_column()
+    sm = SmallMolecule(data.z_approach, data.df_approach, A, k, f0, fs)
     sm.filtfilt(order,freq)
-    #plt.plot(sm.z, sm.ff,sm.z,sm.df)
-    
-    z,df = datastrip.read_omicron_data(folder_root+"ch\\"+sys.argv[2])
-    ch = CornerHole(z,df, A, k, f0, fs)
-    ch.filtfilt(order,freq)
-      
-    
-    z,df = datastrip.read_omicron_data(folder_root+"ad\\"+sys.argv[3])
-    ad =Adatom(z,df, A, k, f0, fs)
-    ad.filtfilt(order,freq)
-    
-    
-    sm.remove_long_range(ch)
-    ad.remove_long_range(ch)
-    #plt.plot(sm.z, sm.df)
-    
-    sm.sader_jarvis()
-    ad.sader_jarvis()
-    plt.plot(sm.distance, sm.force,ad.distance, ad.force)
-    
-    
-    
+    plt.plot(sm.z,sm.df, 'r+-')
     plt.show()
     

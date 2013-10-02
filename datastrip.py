@@ -2,11 +2,11 @@
 read in frequency v distance files
 """
 
-__all__ = ['read_omicron_data']
+__all__ = ['read_omicron_data', 'get_meta_data']
 
 import csv
+import re
 import numpy as np
-import scipy.signal as signal
 
 def read_omicron_data(file_name):
     """
@@ -27,10 +27,6 @@ def read_omicron_data(file_name):
         cantilever position data
         
     """
-    def skip_comments(iterable):
-    for line in iterable:
-        if not line.startswith('#'):
-            yield line
     data = np.loadtxt(file_name)
     #make the two arrays and reverse them 
     #if the curve had approach and retract
@@ -38,49 +34,36 @@ def read_omicron_data(file_name):
     df = data[np.argmin(data[:,0]):0:-1,1]
     z = data[np.argmin(data[:,0]):0:-1,0]
     return z,df
-    
-    
-def simple_average(z,df, stride):
-    """
-    Calculate a simple average of the data a few blocks at a time
-        
-    Parameters
-    ----------
-    z : array_like
-        length n
-    df : array_like
-        length n 
-    stride : int
-        size of averaging steps        
-    
-    Returns
-    -------
-    av_z : array_like
-    
-    av_df : array_like
-    """
-    av_z = np.zeros(np.size(z))
-    av_df = np.zeros(np.size(z))
-    for i in range(0,np.size(z)-stride,stride):
-        av_z[i/5] = np.average(z[i:i+stride-1])
-        av_df[i/5] = np.average(df[i:i+stride-1])
-    av_z = np.trim_zeros(av_z)
-    av_df = np.trim_zeros(av_df)
-    return av_z, av_df
-    
 
-
-
+def get_meta_data(file_name):
+    meta_data = []
+    for line in file_name:
+        if line.startswith('#'):
+            yield line
+def get_meta_data2(lines):
+    meta_data = []
+    for line in lines:
+        if line.startswith('#'):
+            line = re.sub('#', '', line)
+            
+            meta_data.append(line.strip("\r\n"))
+    return meta_data
+            
      
 if __name__ == '__main__':
     folder_name = "C:\\Users\\bendrevniok\\Dropbox\\\
-DrevniokShareWithDrevniok\\benzene\\df_data\\mol_small\\"
-    file_name = "default_2011Jun29-110255_Custom\
--AFMHybrid_NonContact_QPlus_Twin--28_1-Aux2(Z).txt"
+DrevniokShareWithDrevniok\\benzene\\df_data\\30June2011\\"
+    file_name = "sm\\df_90.txt"
     file_name  = folder_name+file_name
     
+
     z,df = read_omicron_data(file_name)
-    print z
-        
+    #print z  
+    with open(file_name,'rb') as f:
+        lines = f.readlines()
+        meta_data = get_meta_data2(lines)
+
+    print meta_data[11]        
+    
         
     

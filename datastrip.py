@@ -4,6 +4,7 @@ read in frequency v distance files
 
 __all__ = ['read_omicron_data']
 
+import csv
 import numpy as np
 import scipy.signal as signal
 
@@ -26,6 +27,10 @@ def read_omicron_data(file_name):
         cantilever position data
         
     """
+    def skip_comments(iterable):
+    for line in iterable:
+        if not line.startswith('#'):
+            yield line
     data = np.loadtxt(file_name)
     #make the two arrays and reverse them 
     #if the curve had approach and retract
@@ -65,12 +70,7 @@ def simple_average(z,df, stride):
     
 
 
-def filtfilt(df, order = 3):
-    # Create an order 3 lowpass butterworth filter.
-    b, a = signal.butter(order, 0.05)
-    # Use filtfilt to apply the filter.
-    return signal.filtfilt(b, a, df)
-               
+
      
 if __name__ == '__main__':
     folder_name = "C:\\Users\\bendrevniok\\Dropbox\\\

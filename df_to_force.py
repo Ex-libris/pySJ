@@ -1,4 +1,5 @@
-__all__ = ["DFData"]
+__all__ = ["DFData", "SmallMolecule", "CornerHole",\
+        "Adatom", "AverageCurve"]
 
 __version__ = "0.1"
 
@@ -46,8 +47,12 @@ class DFData(object):
         """
         b, a = butter(order, freq)
         # Use filtfilt to apply the filter.
-        self.ff = filtfilt(b, a, self.df)
-        return self.ff
+        self.df = filtfilt(b, a, self.df)
+        return self.df
+    
+    def make_plot(self):
+        plt.plot(self.z,self.df)
+         
         
     def sader_jarvis(self):
         """
@@ -68,41 +73,49 @@ class DFData(object):
         Beilstein J. Nanotechnol. 3, 238 (2012)
         http://www.beilstein-journals.org/bjnano/content/pdf/2190-4286-3-27.pdf
         """
-            #make input array in numpy array
-        self.force = np.zeros(np.size(self.sr)-2)
+        #make input array in numpy array
+        self.force = np.zeros(np.size(self.df)-2)
         #calculate the simple derivative as (df[i+1]-df[i])/(z[i+1]-z[i])
-        dz = np.diff(self.sr)/np.diff(self.z)
+        dz = np.diff(self.df)/np.diff(self.z)
     
         for i in range(np.size(self.z)-2):
             #integration range z_prime offset by one
             z_diff = z[i+1:-1] - z[i]
             #set up the integrand and then integrate with trapezoid
             integrand =\
-            (1+((np.sqrt(self.A))/(8*np.sqrt(np.pi*(z_diff)))))*self.ff[i+1:-1]-\
-        (self.A**(3.0/2)/(np.sqrt(2*(z_diff))))*dz[i+1::]
+            (1+((np.sqrt(self.A))/(8*np.sqrt(np.pi*(z_diff)))))*self.df[i+1:-1]-\
+        (self.A**(3.0/2)/(np.sqrt(2*(z_diff))))*dz[i+1:]
         
             integral = np.trapz(integrand, z_diff+self.z[i])
         
             #add some correction factors after [JS]
-            corr_1 = self.sr[i]*np.diff(self.z)[i]
+            corr_1 = self.df[i]*np.diff(self.z)[i]
             corr_2 = 2*(np.sqrt(self.A)/(8*np.sqrt(np.pi)))*\
-                    self.sr[i]*np.sqrt(np.diff(self.z)[i])
+                    self.df[i]*np.sqrt(np.diff(self.z)[i])
             corr_3 = (-2)*((self.A**(3.0/2))/np.sqrt(2))*\
-            dz[i]*np.sqrt(np.diff(z)[i])
+            dz[i]*np.sqrt(np.diff(self.z)[i])
         
             #make the total force and add it to the force array
             self.force[i] = ((2*self.k)/self.f0) *(corr_1+corr_2+corr_3+integral)
 
-        self.forcez = z[:np.size(self.force)]
-        return self.forcez, self.force
+        self.distance = z[:np.size(self.force)]
+        return self.distance, self.force
+        
+    
+
         
 class SmallMolecule(DFData):
     """
     inherits from DFData
     """        
     def remove_long_range(self, corner_hole):
-        self.sr = self.ff-corner_hole.ff
-        return self.sr
+        self.df = self.df-corner_hole.df
+        return self.df
+        
+class Adatom(SmallMolecule):
+    """
+    inherits from SmallMolecule
+    """
         
         
 class CornerHole(DFData):
@@ -110,26 +123,49 @@ class CornerHole(DFData):
     inherits from DFData
     """        
     def shift(self, shift=0.0):
-        self.zs = self.z - shift
-        return self.zs
+        self.z = self.z - shift
+        return self.z
+
+class AverageCurve(object):
+    """
+    A class to hold averaged force curves.
+    :param others:
+        an array of DFData-type objects 
+    """
+    def __init__(self, others):
+        self.force_curves = others
+        print self.force_curves[0]
         
-#class DFDifference(object):
-#    """
-#    extension of DFDdata class that will allow one to subtract 
-#    one :DFData: object from another
-#    This is needed for removing the long-range forces in our experiments. 
-#    """
+    
+    def average(self):
+        self.average = []
+        #print "test"
+        #print np.size(self.force_curves)
+        
+        for i in range(np.size(self.force_curves[0].df)):
+            sum = 0
+            for curve in self.force_curves:
+                sum += curve.df[i]   
+            self.average.append(sum/np.size(self.force_curves))
+        return self.average  
+          
+    def make_plot(self):
+        plt.plot(self.force_curves[0].z,self.average)
+
+                    
+        
             
 if __name__ == '__main__':
     
-    folder_root = "C:\\Users\\bendrevniok\\Dropbox\\DrevniokShareWithDrevniok\\\
-benzene\\df_data\\30June2011\\"
-    A = 2.7e-10
-    k = 1.8e3
-    f0 = 5.64e4
-    fs = 15
-    
-    order = 3
+    folder_root = "C:\\Users\\bendrevniok\\Dropbox\\"
+    folder_root += "DrevniokShareWithDrevniok\\benzene\\df_data\\"
+    folder_root += "30June2011\\" 
+    #folder_root = ""
+    A = 2.5e-10
+    k = 1500
+    f0 = 56400.0
+    fs = 18.3
+    order = 1
     freq = 0.1
     
     z,df = datastrip.read_omicron_data(folder_root+"sm\\"+sys.argv[1])
@@ -140,12 +176,21 @@ benzene\\df_data\\30June2011\\"
     z,df = datastrip.read_omicron_data(folder_root+"ch\\"+sys.argv[2])
     ch = CornerHole(z,df, A, k, f0, fs)
     ch.filtfilt(order,freq)
+      
+    
+    z,df = datastrip.read_omicron_data(folder_root+"ad\\"+sys.argv[3])
+    ad =Adatom(z,df, A, k, f0, fs)
+    ad.filtfilt(order,freq)
+    
     
     sm.remove_long_range(ch)
-    #plt.plot(sm.z, sm.sr)
+    ad.remove_long_range(ch)
+    #plt.plot(sm.z, sm.df)
     
     sm.sader_jarvis()
-    plt.plot(sm.zforce, sm.force)
+    ad.sader_jarvis()
+    plt.plot(sm.distance, sm.force,ad.distance, ad.force)
+    
     
     
     plt.show()

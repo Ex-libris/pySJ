@@ -25,8 +25,8 @@ class DFData(object):
     """
 
     def __init__(self, distance, frequency_shift,
-                 amplitude=2.5e-10, spring_constant=1800,
-                 resonant_frequency=56400, voltage_to_frequency=15, 
+                 amplitude, spring_constant,
+                 resonant_frequency, voltage_to_frequency, 
                  force_distance = None, integrated_force = None):
         self.z = distance
         self.df = frequency_shift * voltage_to_frequency
@@ -101,6 +101,15 @@ class DFData(object):
             
         self.distance = self.z[:np.size(self.force)]
         return self.distance, self.force
+        
+    def normalize(self):
+        """
+        Normalize a force curve to the absolute value
+        of the minimum value of a set of force curves    
+        """
+        self.force = self.force/np.abs(np.min(self.force))
+        
+        
 
 
 class SmallMolecule(DFData):
@@ -108,18 +117,18 @@ class SmallMolecule(DFData):
     inherits from DFData
     """
     def __init__(self, distance, frequency_shift,
-                 amplitude=2.5e-10, spring_constant=1800,
-                 resonant_frequency=56000.0, voltage_to_frequency=15.0, 
+                 amplitude, spring_constant,
+                 resonant_frequency, voltage_to_frequency, 
                  force_distance = None, integrated_force = None,
                  legend_name = "sm"):
         DFData.__init__(self,distance, frequency_shift,
-                        amplitude=2.5e-10, spring_constant=1800.0,
-                        resonant_frequency=56000.0, voltage_to_frequency=15.0, 
+                        amplitude, spring_constant,
+                        resonant_frequency, voltage_to_frequency, 
                         force_distance = None, integrated_force = None)
         self.legend = legend_name
 
     def remove_long_range(self, corner_hole):
-        self.df = self.df - corner_hole.df
+        self.df -= corner_hole.df
         return self.df
 
 
@@ -128,19 +137,19 @@ class Adatom(DFData):
     inherits from SmallMolecule
     """
     def __init__(self, distance, frequency_shift,
-                 amplitude=2.5e-10, spring_constant=1800.0,
-                 resonant_frequency=50000.0, voltage_to_frequency=15.0, 
+                 amplitude, spring_constant,
+                 resonant_frequency, voltage_to_frequency, 
                  force_distance = None, integrated_force = None,
                  legend_name = "ad"):
                  
         DFData.__init__(self,distance, frequency_shift,
-                        amplitude=2.5e-10, spring_constant=1800.0,
-                        resonant_frequency=50000.0, voltage_to_frequency=15.0, 
+                        amplitude, spring_constant,
+                        resonant_frequency, voltage_to_frequency, 
                         force_distance = None, integrated_force = None)
         self.legend = legend_name
 
     def remove_long_range(self, corner_hole):
-        self.df = self.df - corner_hole.df
+        self.df -= corner_hole.df
         return self.df
 
 class CornerHole(DFData):
@@ -148,14 +157,14 @@ class CornerHole(DFData):
     inherits from DFData
     """
     def __init__(self, distance, frequency_shift,
-                 amplitude=2.5e-10, spring_constant=1800,
-                 resonant_frequency=50000, voltage_to_frequency=15, 
+                 amplitude, spring_constant,
+                 resonant_frequency, voltage_to_frequency, 
                  force_distance = None, integrated_force = None,
                  legend_name = "ch"):
                  
         DFData.__init__(self,distance, frequency_shift,
-                        amplitude=2.5e-10, spring_constant=1800,
-                        resonant_frequency=50000, voltage_to_frequency=15, 
+                        amplitude, spring_constant,
+                        resonant_frequency, voltage_to_frequency, 
                         force_distance = None, integrated_force = None)
                         
         self.legend = legend_name
@@ -176,7 +185,7 @@ class AverageCurve(object):
         self.force_curves = others
         self.average_df = None
         self.average_f = None
-
+        self.normalizer = 1.0
 
     def make_average_df(self):
         """
@@ -206,7 +215,16 @@ class AverageCurve(object):
         self.average_f = self.average_f/len(self.force_curves)            
         return self.average_f
     
-
+    
+    def find_minimum(self):
+        """
+        find the minimum value of the set of force curves 
+        """
+        minima = np.zeros(len(self.force_curves))
+        for i in range(len(self.force_curves)):
+            minima[i] = np.min(self.force_curves[i].force)
+        self.normalizer = np.abs(np.min(minima))
+            
     def make_plot(self, key = 'f'):
         if key == 'f':
             plt.plot(self.force_curves[0].distance, 

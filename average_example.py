@@ -1,8 +1,6 @@
-import datastrip
 import df_to_force
 import sys
 import numpy as np
-from scipy.signal import filtfilt, butter
 import matplotlib.pyplot as plt
 
 
@@ -26,7 +24,6 @@ if __name__ == '__main__':
     files = sys.argv[1:]
     
     for i in range(np.size(files)):
-        z,df = datastrip.read_omicron_data(folder_root+"sm\\"+files[i])
         sm.append(df_to_force.SmallMolecule(z,df, A, k, f0, fs))
         sm[i].filtfilt(order,freq)
         sm[i].make_plot()

@@ -54,7 +54,11 @@ class DFData(object):
         else: 
             plt.plot(self.z, self.df, label = plot_type+" "+string)
     
-    def sader_jarvis(self):
+    
+    def five_point_cd(self):
+        return None
+        
+    def sader_jarvis(self, difference = 5):
         """
         implement the Sader-Jarvis inversion
         
@@ -73,34 +77,61 @@ class DFData(object):
         Beilstein J. Nanotechnol. 3, 238 (2012)
         http://www.beilstein-journals.org/bjnano/content/pdf/2190-4286-3-27.pdf
         """
-        #make input array in numpy array
-        self.force = np.zeros(np.size(self.df) - 2)
-        #calculate the simple derivative as (df[i+1]-df[i])/(z[i+1]-z[i])
-        dz = np.diff(self.df) / np.diff(self.z)
 
-        for i in range(np.size(self.z) - 2):
-            #integration range z_prime offset by one
-            z_diff = self.z[i + 1:-1] - self.z[i]
-            #set up the integrand and then integrate with trapezoid
-            integrand = ((1 + 
-                    ((np.sqrt(self.a))/(8 * np.sqrt(np.pi * (z_diff))))) 
-                    * self.df[i + 1:-1]
-                    - (self.a ** (3.0 / 2) / (np.sqrt(2 * z_diff)))
-                    * dz[i + 1:])
-            integral = np.trapz(integrand, z_diff + self.z[i])
-            #add some correction factors after [JS]
-            corr_1 = self.df[i] * np.diff(self.z)[i]
-            corr_2 = (2 * (np.sqrt(self.a) / (8 * np.sqrt(np.pi))) 
-                    * self.df[i] * np.sqrt(np.diff(self.z)[i]))
-            corr_3 = ((-2) * ((self.a ** (3.0 / 2)) / np.sqrt(2)) 
-                    * dz[i] * np.sqrt(np.diff(self.z)[i]))
-
-            #make the total force and add it to the force array
-            self.force[i] = (((2 * self.k) / self.f0) 
-                    * (corr_1 + corr_2 + corr_3 + integral))
+        #get the spacing in z
+        h = self.z[1]-self.z[0]
+        
+        
+        if difference == 5:
+            #preallocate derivative array. It will be n-4 in length 
+            #preallocate the force numpy array same length
             
-        self.distance = self.z[:np.size(self.force)]
+            self.force = np.zeros(np.size(self.z) - 4)
+            self.distance = self.z[2:-2]  
+            derivative = np.zeros(np.size(self.z))
+            weights = np.array([1.0/12, -2.0/3, 0, 2.0/3, -1.0/12])
+            
+            for i in range(2,np.size(self.df)-2):
+                derivative[i] = (np.dot(weights, self.df[i-2:i+3])/h)  
+        
+
+        for i in range(2,np.size(self.z)-2):
+            print i
+            t = self.z[i+1:-2]
+            df = self.df[i+1:-2]
+            deriv = derivative[i+1:-2]
+            integrand = ((1 + (self.a**(1.0/2))/
+                    (8*((np.pi*(t-self.z[i]))**(1/2.0)))) * df
+                    -(((self.a**(3.0/2))/(np.sqrt(2*(t-self.z[i]))))*deriv))
+
+            
+            integral = np.trapz(integrand,t)  
+            self.force[i-2] = ((2 * self.k)/self.f0)*integral  
         return self.distance, self.force
+            
+        #for i in range(np.size(self.z) - 2):
+#            #integration range z_prime offset by one
+#            t = self.z[i + 1:] - self.z[i]
+#            #set up the integrand and then integrate with trapezoid
+#            integrand = ((1 + 
+#                    ((np.sqrt(self.a))/(8 * np.sqrt(np.pi * (z_diff))))) 
+#                    * self.df[i + 1:-1]
+#                    - (self.a ** (3.0 / 2) / (np.sqrt(2 * z_diff)))
+#                    * dz[i + 1:])
+#            integral = np.trapz(integrand, z_diff + self.z[i])
+#            #add some correction factors after [JS]
+#            corr_1 = self.df[i] * np.diff(self.z)[i]
+#            corr_2 = (2 * (np.sqrt(self.a) / (8 * np.sqrt(np.pi))) 
+#                    * self.df[i] * np.sqrt(np.diff(self.z)[i]))
+#            corr_3 = ((-2) * ((self.a ** (3.0 / 2)) / np.sqrt(2)) 
+#                    * dz[i] * np.sqrt(np.diff(self.z)[i]))
+#
+#            #make the total force and add it to the force array
+#            self.force[i] = (((2 * self.k) / self.f0) 
+#                    * (corr_1 + corr_2 + corr_3 + integral))
+            
+        #self.distance = self.z[:np.size(self.force)]
+        #return self.distance, self.force
         
     def normalize(self):
         """

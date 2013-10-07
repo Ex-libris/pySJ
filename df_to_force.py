@@ -7,6 +7,7 @@ from scipy.signal import filtfilt, butter
 import matplotlib.pyplot as plt
 
 
+
 class DFData(object):
     """
     The basic class for a frequency shift curve and height data object
@@ -26,16 +27,16 @@ class DFData(object):
 
     def __init__(self, distance, frequency_shift,
                  amplitude, spring_constant,
-                 resonant_frequency, voltage_to_frequency, 
+                 resonant_frequency, voltage_to_frequency,data_name, 
                  force_distance = None, integrated_force = None):
         self.z = distance
-        self.df = frequency_shift * voltage_to_frequency
+        self.df = frequency_shift * float(voltage_to_frequency)
         self.a = float(amplitude)
         self.k = float(spring_constant)
         self.f0 = float(resonant_frequency)
-        self.fs = float(voltage_to_frequency)
         self.distance = force_distance
         self.force = integrated_force
+        self.name = data_name
 
     def filtfilt(self, filter_order=3, cutoff_freq=0.05):
         """
@@ -48,16 +49,14 @@ class DFData(object):
         self.df = filtfilt(b, a, self.df)
         return self.df
 
-    def make_plot(self, plot_type = "object", string = "file"):
+    def make_plot(self):
         if self.distance is not None:
-            plt.plot(self.distance, self.force, label = plot_type+" "+string)
+            plt.plot(self.distance, self.force, 
+                    label = self.legend+" "+self.name+"f")
         else: 
-            plt.plot(self.z, self.df, label = plot_type+" "+string)
-    
-    
-    def five_point_cd(self):
-        return None
-        
+            plt.plot(self.z, self.df, 
+                    label = self.legend+" "+self.name+"df")
+            
     def sader_jarvis(self, difference = 5):
         """
         implement the Sader-Jarvis inversion
@@ -77,26 +76,21 @@ class DFData(object):
         Beilstein J. Nanotechnol. 3, 238 (2012)
         http://www.beilstein-journals.org/bjnano/content/pdf/2190-4286-3-27.pdf
         """
-
         #get the spacing in z
         h = self.z[1]-self.z[0]
-        
         
         if difference == 5:
             #preallocate derivative array. It will be n-4 in length 
             #preallocate the force numpy array same length
-            
             self.force = np.zeros(np.size(self.z) - 4)
             self.distance = self.z[2:-2]  
             derivative = np.zeros(np.size(self.z))
             weights = np.array([1.0/12, -2.0/3, 0, 2.0/3, -1.0/12])
-            
+                
             for i in range(2,np.size(self.df)-2):
                 derivative[i] = (np.dot(weights, self.df[i-2:i+3])/h)  
-        
-
+       
         for i in range(2,np.size(self.z)-2):
-            print i
             t = self.z[i+1:-2]
             df = self.df[i+1:-2]
             deriv = derivative[i+1:-2]
@@ -106,32 +100,15 @@ class DFData(object):
 
             
             integral = np.trapz(integrand,t)  
-            self.force[i-2] = ((2 * self.k)/self.f0)*integral  
+            #add some correction factors after [JS]
+            corr_1 = self.df[i+2] * h
+            corr_2 = (2 * (np.sqrt(self.a) / (8 * np.sqrt(np.pi))) 
+                    * self.df[i+2] * np.sqrt(h))
+            corr_3 = ((-2) * ((self.a ** (3.0 / 2)) / np.sqrt(2)) 
+                    * derivative[i+2] * np.sqrt(h))
+            self.force[i-2] = ((2 * self.k)/self.f0)*(
+                    integral+corr_1+corr_2+corr_3)  
         return self.distance, self.force
-            
-        #for i in range(np.size(self.z) - 2):
-#            #integration range z_prime offset by one
-#            t = self.z[i + 1:] - self.z[i]
-#            #set up the integrand and then integrate with trapezoid
-#            integrand = ((1 + 
-#                    ((np.sqrt(self.a))/(8 * np.sqrt(np.pi * (z_diff))))) 
-#                    * self.df[i + 1:-1]
-#                    - (self.a ** (3.0 / 2) / (np.sqrt(2 * z_diff)))
-#                    * dz[i + 1:])
-#            integral = np.trapz(integrand, z_diff + self.z[i])
-#            #add some correction factors after [JS]
-#            corr_1 = self.df[i] * np.diff(self.z)[i]
-#            corr_2 = (2 * (np.sqrt(self.a) / (8 * np.sqrt(np.pi))) 
-#                    * self.df[i] * np.sqrt(np.diff(self.z)[i]))
-#            corr_3 = ((-2) * ((self.a ** (3.0 / 2)) / np.sqrt(2)) 
-#                    * dz[i] * np.sqrt(np.diff(self.z)[i]))
-#
-#            #make the total force and add it to the force array
-#            self.force[i] = (((2 * self.k) / self.f0) 
-#                    * (corr_1 + corr_2 + corr_3 + integral))
-            
-        #self.distance = self.z[:np.size(self.force)]
-        #return self.distance, self.force
         
     def normalize(self):
         """
@@ -139,22 +116,25 @@ class DFData(object):
         of the minimum value of a set of force curves    
         """
         self.force = self.force/np.abs(np.min(self.force))
-        
-        
-
-
+    def shift_to_zero(self):
+        """
+        shift a curve to have 0Hz frequency shift 
+        when it is far from the surface
+        """
+        self.df -= self.df[-1]
+        return self.df
 class SmallMolecule(DFData):
     """
     inherits from DFData
     """
     def __init__(self, distance, frequency_shift,
                  amplitude, spring_constant,
-                 resonant_frequency, voltage_to_frequency, 
+                 resonant_frequency, voltage_to_frequency,data_name, 
                  force_distance = None, integrated_force = None,
                  legend_name = "sm"):
         DFData.__init__(self,distance, frequency_shift,
                         amplitude, spring_constant,
-                        resonant_frequency, voltage_to_frequency, 
+                        resonant_frequency, voltage_to_frequency,data_name, 
                         force_distance = None, integrated_force = None)
         self.legend = legend_name
 
@@ -169,13 +149,13 @@ class Adatom(DFData):
     """
     def __init__(self, distance, frequency_shift,
                  amplitude, spring_constant,
-                 resonant_frequency, voltage_to_frequency, 
+                 resonant_frequency, voltage_to_frequency,data_name, 
                  force_distance = None, integrated_force = None,
                  legend_name = "ad"):
                  
         DFData.__init__(self,distance, frequency_shift,
                         amplitude, spring_constant,
-                        resonant_frequency, voltage_to_frequency, 
+                        resonant_frequency, voltage_to_frequency,data_name, 
                         force_distance = None, integrated_force = None)
         self.legend = legend_name
 
@@ -189,13 +169,13 @@ class CornerHole(DFData):
     """
     def __init__(self, distance, frequency_shift,
                  amplitude, spring_constant,
-                 resonant_frequency, voltage_to_frequency, 
+                 resonant_frequency, voltage_to_frequency,data_name, 
                  force_distance = None, integrated_force = None,
                  legend_name = "ch"):
                  
         DFData.__init__(self,distance, frequency_shift,
                         amplitude, spring_constant,
-                        resonant_frequency, voltage_to_frequency, 
+                        resonant_frequency, voltage_to_frequency,data_name, 
                         force_distance = None, integrated_force = None)
                         
         self.legend = legend_name
@@ -217,6 +197,8 @@ class AverageCurve(object):
         self.average_df = None
         self.average_f = None
         self.normalizer = 1.0
+        self.ax = None
+        self.fig = None
 
     def make_average_df(self):
         """
@@ -263,9 +245,41 @@ class AverageCurve(object):
         else:
             plt.plot(self.force_curves[0].z, self.average_df,
                     label = "average df")
-            
-
-
+                    
+    def plot_all_df(self, color_option = 'red'):
+        """
+        plot all plots contained in the average class
+        That will make all the z,df or distance, f plots
+        be plotted.
+        
+        """ 
+        self.make_average_df()
+        self.fig,self.ax = plt.subplots() 
+        plt.xlim((np.min(self.force_curves[0].z)-0.6e-10,
+                np.max(self.force_curves[0].z)+0.5e-10))
+        plt.ylim((np.min(self.force_curves[0].df),
+                np.max(self.force_curves[0].df)))
+        size = len(self.force_curves)
+        for i in range(len(self.force_curves)):
+            if self.force_curves[i].legend == "sm":
+                col = [1.0,0,0,0.5]
+            elif self.force_curves[i].legend == "ad":
+                col = [0.0,1.0,0.0,0.5]
+            elif self.force_curves[i].legend == "ch":
+                col = [0,0,1.0,0.5]
+            rgb = [x * float(i)/(size+2) for x in col] 
+            self.ax.plot(self.force_curves[i].z,self.force_curves[i].df,
+                    marker = '4',
+                    color = rgb,
+                    linewidth = 2,
+                    label = self.force_curves[i].legend+" "
+                    +self.force_curves[i].name+" df") 
+        self.ax.plot(self.force_curves[0].z, self.average_df,
+                color = col,
+                linewidth = 4.0,
+                label = self.force_curves[i].legend +" average df",)
+        self.ax.legend(loc = 'lower right')
+        
 
 class ReadOmicronXY(object):
     """
@@ -277,8 +291,9 @@ class ReadOmicronXY(object):
         examined
     """
 
-    def __init__(self, folder_root="test\\", filename="test", xydata = None,
-                    z_in = None, z_out = None, df_in = None, df_out = None):
+    def __init__(self, folder_root="test\\", filename="test",
+            xydata = None,z_in = None, z_out = None, 
+            df_in = None, df_out = None):
         self.folder_root = folder_root
         self.filename = filename
         self.data = xydata
@@ -286,6 +301,7 @@ class ReadOmicronXY(object):
         self.z_retract = z_out
         self.df_approach = df_in
         self.df_retract = df_out
+        self.name = filename[6:-4]
 
     def change_root(self, root):
         """

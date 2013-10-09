@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 plt.close("all")
-folder_root = "C:\\Users\\bendrevniok\\Dropbox\\"
-folder_root += "DrevniokShareWithDrevniok\\benzene\\df_data\\"
-folder_root += "30June2011\\"
+folder_list = ["C:\\Users\\bendrevniok\\Dropbox\\",
+        "DrevniokShareWithDrevniok\\benzene\\df_data\\","30June2011\\"]
+folder_root = folder_list[0]+folder_list[1]+folder_list[2]
 
 A = 2.5e-10
 k = 2800
@@ -86,13 +86,13 @@ for i in range(len(ad)):
 #ad_av.make_plot()
 ch_av = df_to_force.AverageCurve(ch)
 ch_av.make_average_df()
-#ch_av.plot_all_df()
+ch_av.plot_all_df(folder_root)
 ad_av = df_to_force.AverageCurve(ad)
 ad_av.make_average_df()
-#ad_av.plot_all_df()
+ad_av.plot_all_df(folder_root)
 sm_av = df_to_force.AverageCurve(sm)
 sm_av.make_average_df()
-#sm_av.plot_all_df()
+sm_av.plot_all_df(folder_root)
 
 
 chav = df_to_force.CornerHole(ch_av.force_curves[0].z, ch_av.average_df, 

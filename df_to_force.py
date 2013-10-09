@@ -246,7 +246,7 @@ class AverageCurve(object):
             plt.plot(self.force_curves[0].z, self.average_df,
                     label = "average df")
                     
-    def plot_all_df(self, color_option = 'red'):
+    def plot_all_df(self,filename):
         """
         plot all plots contained in the average class
         That will make all the z,df or distance, f plots
@@ -255,10 +255,12 @@ class AverageCurve(object):
         """ 
         self.make_average_df()
         self.fig,self.ax = plt.subplots() 
-        plt.xlim((np.min(self.force_curves[0].z)-0.6e-10,
-                np.max(self.force_curves[0].z)+0.5e-10))
+        plt.xlim((np.min(self.force_curves[0].z)*1e9 -0.06,
+                np.max(self.force_curves[0].z)*1e9+0.05))
         plt.ylim((np.min(self.force_curves[0].df),
                 np.max(self.force_curves[0].df)))
+        plt.ylabel('frequency shift [Hz]')
+        plt.xlabel('distance [nm]')
         size = len(self.force_curves)
         for i in range(len(self.force_curves)):
             if self.force_curves[i].legend == "sm":
@@ -268,18 +270,27 @@ class AverageCurve(object):
             elif self.force_curves[i].legend == "ch":
                 col = [0,0,1.0,0.5]
             rgb = [x * float(i)/(size+2) for x in col] 
-            self.ax.plot(self.force_curves[i].z,self.force_curves[i].df,
-                    marker = '4',
+            self.ax.plot(self.force_curves[i].z*1e9,self.force_curves[i].df,
+                    marker = 'o',
                     color = rgb,
                     linewidth = 2,
                     label = self.force_curves[i].legend+" "
                     +self.force_curves[i].name+" df") 
-        self.ax.plot(self.force_curves[0].z, self.average_df,
+        col[3] = 1.0
+        self.ax.plot(self.force_curves[0].z*1e9, self.average_df,
                 color = col,
                 linewidth = 4.0,
                 label = self.force_curves[i].legend +" average df",)
         self.ax.legend(loc = 'lower right')
-        
+       
+        self.fig.savefig(filename+
+                self.force_curves[i].legend+"\\"+self.force_curves[i].name
+                +".pdf",
+                transparent=True)
+        self.fig.savefig(filename+
+                self.force_curves[i].legend+"\\"+self.force_curves[i].name
+                +".png",
+                transparent=True)
 
 class ReadOmicronXY(object):
     """

@@ -9,10 +9,10 @@ folder_list = ["C:\\Users\\bendrevniok\\Dropbox\\",
 folder_root = folder_list[0]+folder_list[1]+folder_list[2]
 
 A = 2.5e-10
-k = 2800
+k = 3500
 f0 = 56400.0
 fs = 18.3
-order = 3
+order = 1
 freq = 0.2
 
 sm_files = ["df_90.txt", "df_91.txt", "df_107.txt","df_108.txt","df_113.txt"]
@@ -81,21 +81,35 @@ for i in range(len(ad)):
     #ad[i].normalize()
     #ad[i].make_plot("ad_norm", ad_files[i][3:])
 
-
-ch_av = df_to_force.AverageCurve(ch)
-ch_av.make_average_df()
-ch_av.plot_all_df(folder_root)
-
 ad_av = df_to_force.AverageCurve(ad)
-ad_av.make_average_df()
-ad_av.plot_all_df(folder_root)
-
+ch_av = df_to_force.AverageCurve(ch)
 sm_av = df_to_force.AverageCurve(sm)
+
+
+ad_av.make_average_df()
+ch_av.make_average_df()
 sm_av.make_average_df()
-sm_av.plot_all_df(folder_root)
 
 
-
+chav = df_to_force.CornerHole(ch_av.force_curves[0].z, ch_av.average_df, 
+        A, k, f0,1.0,data.name)
+smav = df_to_force.SmallMolecule(sm_av.force_curves[0].z, sm_av.average_df, 
+        A, k, f0,1.0,data.name)
+adav = df_to_force.Adatom(ad_av.force_curves[0].z, ad_av.average_df, 
+        A, k, f0,1.0,data.name)
+        
+chav.filtfilt(order, freq)
+smav.filtfilt(order, freq)
+adav.filtfilt(order, freq)
+smav.remove_long_range(chav)
+adav.remove_long_range(chav)
+#smav.sader_jarvis()
+#adav.sader_jarvis()
+#chav.make_plot()
+smav.make_plot([-0.2,1.65],[-2,4])
+adav.make_plot([-0.2,1.65],[-2,4])
+#sm_av.make_average_f()
+#sm_av.make_plot()
 
 
 plt.show()

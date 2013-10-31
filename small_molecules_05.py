@@ -9,11 +9,11 @@ folder_list = ["C:\\Users\\bendrevniok\\Dropbox\\",
 folder_root = folder_list[0]+folder_list[1]+folder_list[2]
 
 A = 2.5e-10
-k = 2800
+k = 3500
 f0 = 56400.0
 fs = 18.3
-order = 3
-freq = 0.2
+order = 1
+freq = 0.1
 
 sm_files = ["df_90.txt", "df_91.txt", "df_107.txt","df_108.txt","df_113.txt"]
 sm_files = ["df_90.txt", "df_91.txt"]
@@ -57,42 +57,46 @@ for file_name in ch_files:
     
 for i in range(len(sm)):
     sm[i].shift_to_zero()
-    #sm[i].remove_long_range(ch[4])
-    #sm[i].filtfilt(order, freq)
-    #sm[i].sader_jarvis()
-    #sm[i].make_plot("sm", sm_files[i][3:])
-    #sm[i].normalize()
-    #sm[i].make_plot("sm_norm", sm_files[i][3:])
     
 for i in range(len(ch)):
     ch[i].shift_to_zero()
-    #ch[i].remove_long_range(ch[4])
-    #ch[i].filtfilt(order, freq)
-    #ch[i].sader_jarvis()
-    #ch[i].make_plot("ch", ch_files[i][3:])
-    #ch[i].normalize()
-    #ch[i].make_plot("sm_norm", sm_files[i][3:])
             
 for i in range(len(ad)):
     ad[i].shift_to_zero()
-    #ad[i].filtfilt(order, freq)
-    #ad[i].sader_jarvis()
-    #ad[i].make_plot("ad", ad_files[i][3:])
-    #ad[i].normalize()
-    #ad[i].make_plot("ad_norm", ad_files[i][3:])
 
-
-ch_av = df_to_force.AverageCurve(ch)
-ch_av.make_average_df()
-ch_av.plot_all_df(folder_root)
 
 ad_av = df_to_force.AverageCurve(ad)
-ad_av.make_average_df()
-ad_av.plot_all_df(folder_root)
-
+ch_av = df_to_force.AverageCurve(ch)
 sm_av = df_to_force.AverageCurve(sm)
+
+
+ad_av.make_average_df()
+ch_av.make_average_df()
 sm_av.make_average_df()
-sm_av.plot_all_df(folder_root)
+
+
+chav = df_to_force.CornerHole(ch_av.force_curves[0].z, ch_av.average_df, 
+        A, k, f0,1.0,data.name)
+smav = df_to_force.SmallMolecule(sm_av.force_curves[0].z, sm_av.average_df, 
+        A, k, f0,1.0,data.name)
+adav = df_to_force.Adatom(ad_av.force_curves[0].z, ad_av.average_df, 
+        A, k, f0,1.0,data.name)
+        
+chav.filtfilt(order, freq)
+smav.filtfilt(order, freq)
+adav.filtfilt(order, freq)
+
+smav.shift_to_zero()
+adav.shift_to_zero()
+chav.shift_to_zero()
+
+smav.sader_jarvis()
+adav.sader_jarvis()
+chav.sader_jarvis()
+
+plt.plot((smav.distance)*1e9, (smav.force-chav.force)*1e9,
+                    linewidth = 3.0, 
+                    label = smav.legend+" "+smav.name+"f")
 
 
 

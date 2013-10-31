@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __all__ = ["DFData", "SmallMolecule", "CornerHole", "Adatom", "AverageCurve", "ReadOmicronXY"]
 
 __version__ = "0.1"
@@ -5,6 +6,7 @@ import sys
 import numpy as np
 from scipy.signal import filtfilt, butter
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 
@@ -49,12 +51,23 @@ class DFData(object):
         self.df = filtfilt(b, a, self.df)
         return self.df
 
-    def make_plot(self):
+    def make_plot(self, xlim, ylim):
+        plt.xlim((xlim[0],xlim[1]))
+        plt.ylim((ylim[0],ylim[1]))
+        plt.rc("axes", linewidth=3.0)
+        plt.rc(("xtick","ytick","axes"), labelsize=20.0)
+
         if self.distance is not None:
-            plt.plot(self.distance, self.force, 
+            plt.ylabel('short-range force [nN]')
+            plt.xlabel('distance [nm]')
+            plt.plot(self.distance*1e9, self.force*1e9,
+                    linewidth = 3.0, 
                     label = self.legend+" "+self.name+"f")
         else: 
-            plt.plot(self.z, self.df, 
+            plt.ylabel('frequency shift [Hz]')
+            plt.xlabel('distance [nm]')
+            plt.plot(self.z*1e9, self.df-np.average(self.df[-50:]),
+                    linewidth = 3.0,
                     label = self.legend+" "+self.name+"df")
             
     def sader_jarvis(self, difference = 5):
@@ -121,8 +134,9 @@ class DFData(object):
         shift a curve to have 0Hz frequency shift 
         when it is far from the surface
         """
-        self.df -= self.df[-1]
+        self.df -= np.average(self.df[-50:])
         return self.df
+        
 class SmallMolecule(DFData):
     """
     inherits from DFData
@@ -255,25 +269,24 @@ class AverageCurve(object):
         """ 
         self.make_average_df()
         self.fig,self.ax = plt.subplots() 
-        plt.xlim((np.min(self.force_curves[0].z)*1e9 -0.06,
-                np.max(self.force_curves[0].z)*1e9+0.05))
-        plt.ylim((np.min(self.force_curves[0].df),
-                np.max(self.force_curves[0].df)))
+        plt.xlim((np.min(self.force_curves[0].z)*1e9 - 0.06,
+                np.max(self.force_curves[0].z)*1e9 + 0.05))
+        plt.ylim((-60,2))
         plt.ylabel('frequency shift [Hz]')
         plt.xlabel('distance [nm]')
         size = len(self.force_curves)
         for i in range(len(self.force_curves)):
             if self.force_curves[i].legend == "sm":
-                col = [1.0,0,0,0.5]
+                col = [1.0,0,0,0.9]
             elif self.force_curves[i].legend == "ad":
-                col = [0.0,1.0,0.0,0.5]
+                col = [0.0,1.0,0.0,0.9]
             elif self.force_curves[i].legend == "ch":
-                col = [0,0,1.0,0.5]
+                col = [0,0,1.0,0.9]
             rgb = [x * float(i)/(size+2) for x in col] 
             self.ax.plot(self.force_curves[i].z*1e9,self.force_curves[i].df,
-                    marker = 'o',
+                    'd',
+                    markersize=6,
                     color = rgb,
-                    linewidth = 2,
                     label = self.force_curves[i].legend+" "
                     +self.force_curves[i].name+" df") 
         col[3] = 1.0
